@@ -77,7 +77,7 @@ def simulate_modified(theta, r, alpha, beta, agent_count, initial=[]):
     m = 0.5
     for response in initial:
         m = m*(1-r) + response*r
-    for i in range(count):
+    for i in range(agent_count):
         response = get_agent_choice_with_pressure(m, theta, alpha, beta)
         m = m*(1-r) + response*r
         result.append(response)
