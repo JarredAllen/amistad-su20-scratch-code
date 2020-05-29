@@ -52,3 +52,44 @@ def many_simulate(theta, agent_count, initial, num_sims):
     Returns a list containing the results for each simulation.
     """
     return [simulate(theta, agent_count, initial) for _ in range(num_sims)]
+
+def get_agent_choice_with_pressure(m, theta, alpha, beta):
+    """Simulates an agent deciding to say yes or no. Returns True iff
+    the agent decides to say yes.
+
+    `m` and `theta` are passed into `g` to determine probability of a
+    response in the affirmative. `alpha` and `beta` are the parameters
+    to which `g` is rescaled (see "External Pressure Model" in the
+    paper).
+    """
+    return random() < (beta-alpha)*g(m, theta) + alpha
+
+def simulate_modified(theta, r, alpha, beta, agent_count, initial=[]):
+    """Performs the modified simulation which includes the Recent
+    Majority Vote model and the External Pressure model.
+
+    `theta`, `agent_count`, and `initial` are all defined the same as in
+    the `simulate` function.
+
+    `r`, `alpha`, and `beta` are defined in the paper.
+    """
+    result = list(initial)
+    m = 0.5
+    for response in initial:
+        m = m*(1-r) + response*r
+    for i in range(count):
+        response = get_agent_choice_with_pressure(m, theta, alpha, beta)
+        m = m*(1-r) + response*r
+        result.append(response)
+    return result
+
+def many_simulate_modified(theta, r, alpha, beta, agent_count, num_sims, initial=[]):
+    """Performs `num_sims` simulations, where each one has the specified
+    parameters (see `simulate_modified` for documentation on those
+    parameters.
+
+    It returns a list containing the results for each simulation (where
+    each simulation's results are themselves a list of True/False
+    values).
+    """
+    return [simulate_modified(theta, r, alpha, beta, agent_count, initial) for _ in range(num_sims)]
