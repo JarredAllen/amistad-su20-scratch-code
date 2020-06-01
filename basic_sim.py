@@ -64,7 +64,7 @@ def get_agent_choice_with_pressure(m, theta, alpha, beta):
     """
     return random() < (beta-alpha)*g(m, theta) + alpha
 
-def simulate_modified(theta, r, alpha, beta, agent_count, initial=[]):
+def simulate_modified(theta, r, alpha, beta, agent_count, initial=0.5):
     """Performs the modified simulation which includes the Recent
     Majority Vote model and the External Pressure model.
 
@@ -73,17 +73,21 @@ def simulate_modified(theta, r, alpha, beta, agent_count, initial=[]):
 
     `r`, `alpha`, and `beta` are defined in the paper.
     """
-    result = list(initial)
-    m = 0.5
-    for response in initial:
-        m = m*(1-r) + response*r
+    if type(initial) is list:
+        result = list(initial)
+        m = 0.5
+        for agent in initial:
+            m = (1-r)*m + r*agent
+    else:
+        result = []
+        m = initial
     for i in range(agent_count):
         response = get_agent_choice_with_pressure(m, theta, alpha, beta)
         m = m*(1-r) + response*r
         result.append(response)
     return result
 
-def many_simulate_modified(theta, r, alpha, beta, agent_count, num_sims, initial=[]):
+def many_simulate_modified(theta, r, alpha, beta, agent_count, num_sims, initial=0.5):
     """Performs `num_sims` simulations, where each one has the specified
     parameters (see `simulate_modified` for documentation on those
     parameters.
