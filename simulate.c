@@ -1,4 +1,5 @@
 #include <math.h>
+#include <pthread.h>
 #include <stdlib.h>
 
 // Computes the value of $f(theta, M_i)$
@@ -11,10 +12,16 @@ double g(double m, double theta) {
     return (f(m, theta) - f(0, theta)) / (f(1, theta) - f(0, theta));
 }
 
+pthread_mutex_t rand_lock = PTHREAD_MUTEX_INITIALIZER;
+
 // Returns 1 if the agent chooses to affirm, 0 if the agent chooses to
 // reject
 char get_agent_choice(double m, double theta) {
-    return ((double)rand()) / RAND_MAX < g(m, theta);
+    int rng;
+    pthread_mutex_lock(&rand_lock);
+    rng = rand();
+    pthread_mutex_unlock(&rand_lock);
+    return ((double)rng) / RAND_MAX < g(m, theta);
 }
 
 // Runs the basic simulation and stores its result in the array passed to result
@@ -41,7 +48,11 @@ double g_complex(double m, double theta, double alpha, double beta) {
 // Returns 1 if the agent chooses to affirm, 0 if the agent chooses to
 // reject. This function also includes alpha and beta
 char get_agent_choice_complex(double m, double theta, double alpha, double beta) {
-    return ((double)rand()) / RAND_MAX < g_complex(m, theta, alpha, beta);
+    int rng;
+    pthread_mutex_lock(&rand_lock);
+    rng = rand();
+    pthread_mutex_unlock(&rand_lock);
+    return ((double)rng) / RAND_MAX < g_complex(m, theta, alpha, beta);
 }
 
 void sim_complex(char* result, double theta, double alpha, double beta, double r, int agent_count, double initial_m) {
