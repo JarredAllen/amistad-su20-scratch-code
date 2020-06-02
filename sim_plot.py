@@ -2,7 +2,21 @@ from concurrent import futures
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulate_c import many_simulate_complex
+from simulate_c import many_simulate_complex, many_simulate_basic
+
+def visualize_agreement(thetas, agent_count=500, num_reps=3500):
+    xs = np.arange(1, agent_count, 1)
+    for theta in thetas:
+        sims = many_simulate_basic(theta, agent_count, num_reps)
+        agree_odds = np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
+        plt.plot(xs, agree_odds, label=f'\u03b8 = {theta}')
+    plt.xlim(1, agent_count)
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.title('Evolution of Agreement among witnesses')
+    plt.xlabel('Witness number')
+    plt.ylabel('Probability of witness agreeing with previous')
+    plt.show()
 
 def compute_counts_for_one_beta(args):
     theta, r, alpha, beta, agent_count, num_reps, initial = args
@@ -57,7 +71,8 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
 
 def main():
     # plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
-    plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
+    # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
+    visualize_agreement([2.0, 5.0, 7.0])
 
 if __name__ == '__main__':
     main()
