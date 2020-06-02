@@ -8,7 +8,10 @@ def visualize_agreement(thetas, agent_count=500, num_reps=3500):
     xs = np.arange(1, agent_count, 1)
     for theta in thetas:
         sims = many_simulate_basic(theta, agent_count, num_reps)
-        agree_odds = np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
+        agree_odds = [sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)]
+        agree_odds = np.array([(agree_odds[0]*2+agree_odds[1])/3]
+                              + [(agree_odds[i-1] + agree_odds[i] + agree_odds[i+1])/3 for i in range(1, len(agree_odds)-1)]
+                              + [(agree_odds[-2] + agree_odds[-1]*2)/3])
         plt.plot(xs, agree_odds, label=f'\u03b8 = {theta}')
     plt.xlim(1, agent_count)
     plt.ylim(0, 1)
@@ -24,9 +27,9 @@ def compute_counts_for_one_beta(args):
     freqs = np.array([sum(sim[i] for sim in sim_res) / num_reps for i in range(agent_count)])
     # Perform a pass to average each element with its neighbors, to
     # decrease the jaggedness of the plot
-    freqs = np.array([(freqs[0]*2+freqs[1])/3]
+    freqs = np.array([(freqs[0]*2 + freqs[1])/3]
                      + [(freqs[i-1] + freqs[i] + freqs[i+1])/3 for i in range(1, len(freqs)-1)]
-                     + [(freqs[-2]*2+freqs[-1])/3])
+                     + [(freqs[-2] + freqs[-1]*2)/3])
     return freqs
 
 def plot_prob_affirm_vs_position(betas, theta=2.0, r=0.035, alpha=0.0, agent_count=400, num_reps=3500, initial=0.5):
