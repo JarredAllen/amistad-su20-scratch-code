@@ -14,7 +14,7 @@ def visualize_agreement(thetas, agent_count=500, num_reps=3500):
                               + [(agree_odds[-2] + agree_odds[-1]*2)/3])
         plt.plot(xs, agree_odds, label=f'\u03b8 = {theta}')
     plt.xlim(1, agent_count)
-    plt.ylim(0, 1)
+    # plt.ylim(0, 1)
     plt.legend()
     plt.title('Evolution of Agreement among witnesses')
     plt.xlabel('Witness number')
@@ -74,8 +74,8 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
 
 def main():
     # plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
-    # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
-    visualize_agreement([2.0, 5.0, 7.0])
+    plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000)
+    # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
 
 if __name__ == '__main__':
     main()

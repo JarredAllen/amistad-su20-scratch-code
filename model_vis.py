@@ -23,22 +23,33 @@ def r_vs_majority_time():
     xs = np.linspace(0, 0.5, 2000)[1:]
     ys = np.ceil(np.log(0.5)/np.log(1-xs))
     fig, ax = plt.subplots()
-    ax.set_yscale("log")
-    ax.set_ylim(bottom=1)
-    ax.set_yticks([1, 10, 100, 1000, 10000])
-    ax.set_yticklabels(['1', '10', '100', '1000', '10000'])
+    # ax.set_yscale("log")
+    # ax.set_ylim(bottom=1)
+    ax.set_ylim(top=400)
+    # ax.set_yticks([1, 10, 100, 1000, 10000])
+    # ax.set_yticklabels(['1', '10', '100', '1000', '10000'])
     ax.set_ylabel("Number of witnesses to overturn a majority")
-    ax.set_xscale("log")
-    ax.set_xticks([0.001, 0.01, 0.1, 0.5])
-    ax.set_xticklabels(['0.001', '0.01', '0.1', '0.5'])
-    ax.set_xlabel("Value of r")
-    ax.grid(which='minor', linewidth=0.3)
-    ax.grid(which='major', linewidth=0.8)
-    ax.plot(xs, ys)
+    # ax.set_xscale("log")
+    # ax.set_xticks([0.001, 0.01, 0.1, 0.5])
+    # ax.set_xticklabels(['0.001', '0.01', '0.1', '0.5'])
+    ax.set_xlabel("Value of 1-r")
+    # ax.grid(which='minor', linewidth=0.3)
+    # ax.grid(which='major', linewidth=0.8)
+    ax.plot(1-xs, ys)
+    plt.show()
+
+def weights_vs_r(rvals, xvals):
+    for rval in rvals:
+        plt.plot(xvals, rval*np.power(1-rval, xvals-1), label=f'r={rval}')
+    plt.title('Weighting decay for different values of r')
+    plt.xlabel('$\\delta$')
+    plt.ylabel('$w(r, \\delta)$')
+    plt.legend()
     plt.show()
 
 def main():
-    r_vs_majority_time()
+    # r_vs_majority_time()
+    weights_vs_r([0.4, 0.3, 0.2, 0.1, 0.001], np.arange(1, 50, 1))
 
 if __name__ == '__main__':
     main()
