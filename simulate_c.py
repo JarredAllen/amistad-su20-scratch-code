@@ -33,7 +33,7 @@ get_agent_choice_complex = clib.get_agent_choice_complex
 get_agent_choice_complex.restype = ctypes.c_char
 
 def sim_complex(theta, r, alpha, beta, agent_count, initial_m=0.5):
-    buf = np.array([0]*agent_count, dtype=np.byte)
+    buf = np.zeros(agent_count, dtype=np.byte)
     clib.sim_complex(ctypes.c_char_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_double(r), ctypes.c_int(agent_count), ctypes.c_double(initial_m))
     return buf
 
@@ -45,3 +45,12 @@ def many_simulate_complex(theta, r, alpha, beta, agent_count, num_sims, initial_
     of `sim_complex` for the other arguments.
     """
     return [sim_complex(theta, r, alpha, beta, agent_count, initial_m) for _ in range(num_sims)]
+
+def compute_error_estimates(data, num_trials):
+    """Computes estimates on the error bars by using the formula
+    1.96*sqrt(p*(1-p)/n)
+    """
+    buf = np.zeros(data.shape, dtype=np.double)
+    clib.compute_error_estimates(ctypes.c_void_p(buf.ctypes.data), ctypes.c_void_p(data.ctypes.data), ctypes.c_int(data.size), ctypes.c_int(num_trials))
+    return buf
+

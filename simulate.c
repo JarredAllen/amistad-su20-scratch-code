@@ -65,3 +65,10 @@ void sim_complex(char* result, double theta, double alpha, double beta, double r
         result[i] = response;
     }
 }
+
+void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {
+    int i;
+    for (i=0; i < num_values; i++) {
+        result[i] = 1.96 * sqrt(values[i]*(1-values[i])/num_trials);
+    }
+}

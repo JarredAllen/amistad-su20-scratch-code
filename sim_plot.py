@@ -2,17 +2,21 @@ from concurrent import futures
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulate_c import many_simulate_complex, many_simulate_basic
+from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates
+
+def shade_error_region(xs, ys, errors, *args, **kwargs):
+    plt.fill_between(xs, ys-errors, ys+errors, *args, **kwargs)
 
 def visualize_agreement(thetas, agent_count=500, num_reps=3500):
     xs = np.arange(1, agent_count, 1)
     for theta in thetas:
         sims = many_simulate_basic(theta, agent_count, num_reps)
-        agree_odds = [sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)]
-        agree_odds = np.array([(agree_odds[0]*2+agree_odds[1])/3]
-                              + [(agree_odds[i-1] + agree_odds[i] + agree_odds[i+1])/3 for i in range(1, len(agree_odds)-1)]
-                              + [(agree_odds[-2] + agree_odds[-1]*2)/3])
+        agree_odds = np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
+        # agree_odds = np.array([(agree_odds[0]*2+agree_odds[1])/3]
+                              # + [(agree_odds[i-1] + agree_odds[i] + agree_odds[i+1])/3 for i in range(1, len(agree_odds)-1)]
+                              # + [(agree_odds[-2] + agree_odds[-1]*2)/3])
         plt.plot(xs, agree_odds, label=f'\u03b8 = {theta}')
+        shade_error_region(xs, agree_odds, compute_error_estimates(agree_odds, 5000), alpha=0.3)
     plt.xlim(1, agent_count)
     # plt.ylim(0, 1)
     plt.legend()
@@ -27,9 +31,9 @@ def compute_counts_for_one_beta(args):
     freqs = np.array([sum(sim[i] for sim in sim_res) / num_reps for i in range(agent_count)])
     # Perform a pass to average each element with its neighbors, to
     # decrease the jaggedness of the plot
-    freqs = np.array([(freqs[0]*2 + freqs[1])/3]
-                     + [(freqs[i-1] + freqs[i] + freqs[i+1])/3 for i in range(1, len(freqs)-1)]
-                     + [(freqs[-2] + freqs[-1]*2)/3])
+    # freqs = np.array([(freqs[0]*2 + freqs[1])/3]
+                     # + [(freqs[i-1] + freqs[i] + freqs[i+1])/3 for i in range(1, len(freqs)-1)]
+                     # + [(freqs[-2] + freqs[-1]*2)/3])
     return freqs
 
 def plot_prob_affirm_vs_position(betas, theta=2.0, r=0.035, alpha=0.0, agent_count=400, num_reps=3500, initial=0.5):
@@ -38,6 +42,7 @@ def plot_prob_affirm_vs_position(betas, theta=2.0, r=0.035, alpha=0.0, agent_cou
     xs = np.arange(1, agent_count+1, 1)
     for sim, beta in zip(sims, betas):
         plt.plot(xs, sim, label=f'\u03b2 = {beta}')
+        shade_error_region(xs, sim, compute_error_estimates(sim, num_reps), alpha=0.5)
     plt.xlim(0, agent_count)
     plt.ylim(0, 1)
     plt.legend()
@@ -64,6 +69,7 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
     xs = np.arange(1, agent_count+1, 1)
     for sim, beta in zip(sims, betas):
         plt.plot(xs, sim, label=f'\u03b2 = {beta}')
+        shade_error_region(xs, sim, compute_error_estimates(sim, num_reps), alpha=0.5)
     plt.xlim(0, agent_count)
     plt.ylim(0, 1)
     plt.legend()
@@ -73,9 +79,11 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
     plt.show()
 
 def main():
-    # plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
+    plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
+    plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.5)
+    plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
     plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000)
-    # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
+    visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
 
 if __name__ == '__main__':
     main()
