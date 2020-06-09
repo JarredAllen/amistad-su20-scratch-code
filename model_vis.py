@@ -48,7 +48,8 @@ def weights_vs_r(rvals, xvals):
     plt.show()
 
 def main():
-    # r_vs_majority_time()
+    plot_g([1, 5, 10, 30, 100])
+    r_vs_majority_time()
     weights_vs_r([0.4, 0.3, 0.2, 0.1, 0.001], np.arange(1, 50, 1))
 
 if __name__ == '__main__':
