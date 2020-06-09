@@ -85,17 +85,22 @@ def plot_prob_h_given_e_for_lambdas(lambdas, pf, pt, ph, N, theta, r, agent_coun
         given e and its error bars.
         """
         peh = pt*ph
-        pelnh = result[-1] ** N
-        pelnh_d = (pelnh * (1-pelnh) / num_reps) ** .5  # TODO something more precise for this
+        q = sum(result[-result.size // 10:])/ (result.size // 10)
+        q_d = (q * (1-q) / (num_reps * result.size // 10)) ** .5
+        pelnh =  q ** N
+        pelnh_d = pelnh * N * q_d/q
         pe = peh + pelnh*(1-ph)
-        phle = peh / pe
-        phle_d = pelnh_d * peh * (1-ph) / (peh + (1-ph)*pelnh)**2
+        phle = peh / (peh + pelnh*(1-ph))
+        phle_d = phle * pelnh_d*(1-ph) / (peh + pelnh*(1-ph))
+        print(phle, "+/-", phle_d)
         return phle, phle_d
     probs, error_bars = map(np.array, zip(*map(prob_from_results, sim_res)))
     plt.plot(lambdas, probs)
     shade_error_region(lambdas, probs, error_bars, alpha=0.5)
     plt.xlabel('$\\lambda$')
     plt.ylabel('$P(E|H)$')
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
     plt.show()
 
 def main():
@@ -104,7 +109,7 @@ def main():
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000)
     # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
-    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 10), 0.95, 0.1, 1e-6, 500, 2.0, 0.035, 250, 500)
+    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 30), 0.95, 0.1, 1e-9, 500, 2.0, 0.035, 500, 4000)
 
 if __name__ == '__main__':
     main()
