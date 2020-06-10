@@ -2,7 +2,7 @@ from concurrent import futures
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates
+from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates, prob_last_n_unanimous
 
 def shade_error_region(xs, ys, errors, *args, **kwargs):
     plt.fill_between(xs, ys-errors, ys+errors, *args, **kwargs)
@@ -73,17 +73,15 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
     plt.ylabel('Probability of affirming')
     plt.show()
 
-def plot_prob_h_given_e_for_lambdas(lambdas, pf, pt, ph, N, theta, r, agent_count, num_reps, initial=0.5):
-    executor = futures.ProcessPoolExecutor()
-    sim_res = executor.map(compute_counts_for_args,
-        [(theta, r, (1-l_val)*pf, pf + (1-pf)*l_val, agent_count, num_reps, initial)
-         for l_val in lambdas
-        ]
-    )
+def explain_previous_plot_weirdness():
     def prob_from_results(result):
         """Take a single simulation run and return the probability of h
         given e and its error bars.
         """
+        pt = 0.95
+        ph = 1e-9
+        num_reps = 4000
+        N = 500
         peh = pt*ph
         q = sum(result[-result.size // 10:])/ (result.size // 10)
         q_d = (q * (1-q) / (num_reps * result.size // 10)) ** .5
@@ -92,16 +90,36 @@ def plot_prob_h_given_e_for_lambdas(lambdas, pf, pt, ph, N, theta, r, agent_coun
         pe = peh + pelnh*(1-ph)
         phle = peh / (peh + pelnh*(1-ph))
         phle_d = phle * pelnh_d*(1-ph) / (peh + pelnh*(1-ph))
-        print(phle, "+/-", phle_d)
-        return phle, phle_d
-    probs, error_bars = map(np.array, zip(*map(prob_from_results, sim_res)))
-    plt.plot(lambdas, probs)
-    shade_error_region(lambdas, probs, error_bars, alpha=0.5)
-    plt.xlabel('$\\lambda$')
-    plt.ylabel('$P(E|H)$')
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
+        return q, q_d
+        # return phle, phle_d
+    max_num_agents = 4000
+    xs = np.arange(100, max_num_agents+1, max_num_agents // 40)
+    lambdas = [0.0, 0.25, 0.5, 0.9, 0.95, 0.96, 0.975, 1]
+    for l in lambdas:
+        sim_res = compute_counts_for_args((2.0, 0.035, (1-l)*0.95, 0.95 + (1-0.95)*l, max_num_agents, 4000, 0.5))
+        ys, errs = map(np.array, zip(*map(lambda length: prob_from_results(sim_res[:length]), xs)))
+        plt.plot(xs, ys, label=f'$\\lambda = {l}$')
+        shade_error_region(xs, ys, errs*1.96, alpha=0.5)
+    plt.legend()
+    plt.xlabel('num_agents')
+    plt.ylabel('computed probability')
     plt.show()
+
+def prob_from_args(args):
+    return prob_last_n_unanimous(*args)
+def plot_prob_h_given_e_for_lambdas(lambdas, pf, pt, ph, N, theta, r, agent_count, num_reps, initial=0.5, show_plot=True):
+    executor = futures.ProcessPoolExecutor()
+    probs, error_bars = map(np.array, zip(*executor.map(prob_from_args, [
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
+        for l in lambdas
+    ])))
+    plt.plot(lambdas, probs)
+    shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
+    plt.xlabel('$\\lambda$')
+    plt.ylabel('$P(H|E)$')
+    plt.xlim(0, 1)
+    # plt.ylim(0, 1)
+    if show_plot: plt.show()
 
 def main():
     # plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
@@ -109,7 +127,7 @@ def main():
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000)
     # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
-    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 30), 0.95, 0.1, 1e-9, 500, 2.0, 0.035, 500, 4000)
+    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 30), 0.95, 0.1, 1e-4, 100, 5.0, 0.035, 1600, 8000)
 
 if __name__ == '__main__':
     main()

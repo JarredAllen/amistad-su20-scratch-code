@@ -66,6 +66,33 @@ void sim_complex(char* result, double theta, double alpha, double beta, double r
     }
 }
 
+char last_n_unanimous(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count) {
+    double m = intial_m;
+    int i;
+    char response;
+    for (i=0; i < agent_count; i++) {
+        response = get_agent_choice_complex(m, theta, alpha, beta);
+        m = m*(1-r) + response*r;
+    }
+    for (i=0; i < tail_count; i++) {
+        response = get_agent_choice_complex(m, theta, alpha, beta);
+        if (!response) {
+            return 0;
+        }
+        m = m*(1-r) + response*r;
+    }
+    return 1;
+}
+
+double prob_last_n_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps) {
+    int i;
+    int successes = 0;
+    for (i = 0; i < num_reps; i++) {
+        successes += last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count);
+    }
+    return ((double) successes) / ((double) num_reps);
+}
+
 void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {
     int i;
     for (i=0; i < num_values; i++) {

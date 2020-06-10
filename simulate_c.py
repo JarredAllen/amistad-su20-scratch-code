@@ -54,3 +54,20 @@ def compute_error_estimates(data, num_trials):
     clib.compute_error_estimates(ctypes.c_void_p(buf.ctypes.data), ctypes.c_void_p(data.ctypes.data), ctypes.c_int(data.size), ctypes.c_int(num_trials))
     return buf
 
+
+last_n_unanimous = clib.last_n_unanimous
+last_n_unanimous.restype = ctypes.c_char
+
+def prob_last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count, num_reps):
+    """Runs the simulation `num_reps` times, and finds the probability
+    that, after `agent_count` witnesses have given their testimony, that
+    all of the next `tail_count` witnesses all affirm the hypothesis.
+
+    It returns a tuple consisting of the simulated probability and the
+    error on that (1 sigma).
+
+    For the other parameters, see the documentation of `sim_complex`.
+    """
+    prob = float(clib.prob_last_n_unanimous(ctypes.c_double(theta), ctypes.c_double(r), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_int(agent_count), ctypes.c_double(initial_m), ctypes.c_int(tail_count), ctypes.c_int(num_reps)))
+    err = (prob * (1-prob) / num_reps) ** .5
+    return prob, err
