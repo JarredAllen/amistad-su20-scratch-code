@@ -129,6 +129,7 @@ def plot_prob_h_given_e_for_lambdas(lambdas, pf, pt, ph, N, theta, r, agent_coun
     plt.xlim(0, 1)
     # plt.ylim(0, 1)
     if show_plot: plt.show()
+    else: plt.savefig('../spectrum-of-dependence-plot.pdf')
 
 def main():
     # plot_prob_affirm_vs_position([0.5, 0.75, 0.9, 0.95, 1.0])
@@ -136,8 +137,8 @@ def main():
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7)
     # plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000)
     # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000)
-    # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), 0.95, 0.5, 1e-3, 150, 5.0, 0.035, 1600, 8000)
-    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), 0.7, 0.5, 1e-3, 40, 5.0, 0.035, 1600, 10000)
+    # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 150), 0.95, 0.5, 1e-3, 150, 5.0, 0.035, 1600, 80000, show_plot=False)
+    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), 0.7, 0.5, 1e-4, 35, 5.0, 0.035, 1600, 1000000, show_plot=False)
 
 if __name__ == '__main__':
     main()
