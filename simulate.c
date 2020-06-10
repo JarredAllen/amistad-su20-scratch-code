@@ -87,10 +87,14 @@ char last_n_unanimous(double theta, double r, double alpha, double beta, int age
 double prob_last_n_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps) {
     int i;
     int successes = 0;
+    double ans;
     for (i = 0; i < num_reps; i++) {
-        successes += last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count);
+        if (last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count)) {
+            successes++;
+        }
     }
-    return ((double) successes) / ((double) num_reps);
+    ans = ((double) successes) / num_reps;
+    return ans;
 }
 
 void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {
