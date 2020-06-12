@@ -12,6 +12,8 @@ def plot_g(thetas, show=True):
     for theta in thetas:
         plt.plot(xs, g(xs, theta), label=f'theta = {theta}')
     plt.title('Plots of g for different values of theta')
+    plt.xlabel('$x$')
+    plt.ylabel('$g_\\theta(x)$')
     plt.legend()
     if show:
         plt.show()
