@@ -194,9 +194,14 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
 
 def main():
     plt.style.use('ggplot')
+    from cycler import cycler
+    style_cycler = cycler(color=['#eb3d02', '#ff0dff', '#0004e8', '#ffba00', '#00b800'])
+    style_cycler += cycler(marker=['o', '^', 's', '+', '*'])
+    style_cycler *= cycler(markevery=[0.2])
+    plt.rc('axes', prop_cycle=style_cycler)
 
     plot_g([1, 5, 10, 30, 100], save_file='../plots/g-vs-theta.pdf')
-    visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=25000, save_file='../plots/simple-dependence-agreement.pdf')
+    visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=10000, save_file='../plots/simple-dependence-agreement.pdf')
     visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
     print('Simple Majority Vote Done!')
 
