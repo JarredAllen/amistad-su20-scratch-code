@@ -118,7 +118,7 @@ char last_n_near_unanimous(double theta, double r, double alpha, double beta, in
     return 1;
 }
 
-double prob_last_n_near_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps, int reject_allowance) {
+void prob_last_n_near_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
     int i;
     int successes = 0;
     double ans;
@@ -127,8 +127,14 @@ double prob_last_n_near_unanimous(double theta, double r, double alpha, double b
             successes++;
         }
     }
-    ans = ((double) successes) / num_reps;
-    return ans;
+    while (successes < min_successful_reps) {
+        if (last_n_near_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count, reject_allowance)) {
+            successes++;
+        }
+        num_reps++;
+    }
+    *prob_out = ((double) successes) / num_reps;
+    *err_out = sqrt(*prob_out*(1.0 - *prob_out) / num_reps);
 }
 
 void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {

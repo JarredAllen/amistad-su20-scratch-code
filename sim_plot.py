@@ -56,18 +56,18 @@ def weights_vs_r(rvals, xvals, save_file=None):
 def shade_error_region(xs, ys, errors, *args, **kwargs):
     plt.fill_between(xs, ys-errors, ys+errors, in_layout=True, *args, **kwargs)
 
+def compute_agree_odds(args):
+    theta, agent_count, num_reps = args
+    sims = many_simulate_basic(theta, agent_count, num_reps)
+    return np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
 def visualize_agreement(thetas, agent_count=500, num_reps=3500, save_file=None):
+    executor = futures.ProcessPoolExecutor()
+    all_agree_odds = executor.map(compute_agree_odds, [(theta, agent_count, num_reps) for theta in thetas])
     xs = np.arange(1, agent_count, 1)
-    for theta in thetas:
-        sims = many_simulate_basic(theta, agent_count, num_reps)
-        agree_odds = np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
-        # agree_odds = np.array([(agree_odds[0]*2+agree_odds[1])/3]
-                              # + [(agree_odds[i-1] + agree_odds[i] + agree_odds[i+1])/3 for i in range(1, len(agree_odds)-1)]
-                              # + [(agree_odds[-2] + agree_odds[-1]*2)/3])
+    for theta, agree_odds in zip(thetas, all_agree_odds):
         plt.plot(xs, agree_odds, label=f'\u03b8 = {theta}')
-        shade_error_region(xs, agree_odds, compute_error_estimates(agree_odds, 5000), alpha=0.3)
+        shade_error_region(xs, agree_odds, compute_error_estimates(agree_odds, agent_count), alpha=0.3)
     plt.xlim(1, agent_count)
-    # plt.ylim(0, 1)
     plt.legend()
     plt.title('Evolution of Agreement among witnesses')
     plt.xlabel('Witness number')
@@ -126,7 +126,7 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
 
 def prob_from_args(args):
     return prob_last_n_unanimous(*args)
-def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None):
+def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None, min_successful_reps=16):
     executor = futures.ProcessPoolExecutor()
     def phle_from_probs(prob, error, ph):
         peh = pt*ph
@@ -137,7 +137,7 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
         phle_d = phle * pelnh_d*(1-ph) / (peh + pelnh*(1-ph))
         return phle, phle_d
     sim_data = list(executor.map(prob_from_args, [
-        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps, min_successful_reps)
         for l in lambdas
     ]))
     for ph in phs:
@@ -152,10 +152,10 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
     if save_file is None: plt.show()
     else: plt.savefig(save_file)
 
-def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None):
+def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16):
     executor = futures.ProcessPoolExecutor()
     probs, error_bars = map(np.array, zip(*executor.map(prob_from_args, [
-        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps, min_successful_reps)
         for l in lambdas
     ])))
     fig, ax = plt.subplots()
@@ -170,10 +170,10 @@ def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, nu
 
 def prob_near_unanimous_from_args(args):
     return prob_last_n_near_unanimous(*args)
-def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None):
+def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16):
     executor = futures.ProcessPoolExecutor()
     probs, error_bars = map(np.array, zip(*executor.map(prob_near_unanimous_from_args, [
-        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps, frac_required)
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps, frac_required, min_successful_reps)
         for l in lambdas
     ])))
     fig, ax = plt.subplots()
@@ -189,7 +189,7 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
 def main():
     plt.style.use('ggplot')
 
-    plot_g([1, 5, 10, 30, 100, -100], save_file='g-vs-theta.pdf')
+    plot_g([1, 5, 10, 30, 100, -100], save_file='../plots/g-vs-theta.pdf')
     visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=5000, save_file='../plots/simple-dependence-agreement.pdf')
     visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
     print('Simple Majority Vote Done!')
@@ -202,13 +202,14 @@ def main():
     plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.5, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-half.pdf')
     plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority.pdf')
     plot_prob_affirm_vs_position_with_initial_g([0.5, 0.75, 0.9, 0.95, 1.0], theta=2.0, initial_g=0.7, agent_count=2000, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority-long.pdf')
-    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 5.0, 0.035, 1600, 80000, save_file='../plots/sod-h-given-e.pdf')
     print('External Pressure Done!')
 
+    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 5.0, 0.035, 1600, 80000, save_file='../plots/sod-h-given-e.pdf')
     plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 100), 0.5, 13, 5.0, 0.035, 1600, 80000, plot_log=True, save_file='../plots/sod-pconsensus-linear.pdf')
     plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 100), 0.5, 13, 5.0, 0.035, 1600, 80000, plot_log=False, save_file='../plots/sod-pconsensus-log.pdf')
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 5.0, 0.035, 1600, 80000, .99, show_plot=False, plot_log=False)
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 5.0, 0.035, 1600, 10000000, .9, show_plot=False)
+    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.9, 120, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
+    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
+    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-3-linear.pdf', plot_log=False)
     print('Spectrum of Dependence Done!')
 
 if __name__ == '__main__':

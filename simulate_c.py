@@ -77,8 +77,7 @@ def prob_last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_co
 last_n_near_unanimous = clib.last_n_near_unanimous
 last_n_near_unanimous.restype = ctypes.c_char
 
-clib.prob_last_n_near_unanimous.restype = ctypes.c_double
-def prob_last_n_near_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count, num_reps, frac_required):
+def prob_last_n_near_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_count, num_reps, frac_required, min_successful_reps=0):
     """Runs the simulation `num_reps` times, and finds the probability
     that, after `agent_count` witnesses have given their testimony, that
     all of the next `tail_count` witnesses all affirm the hypothesis.
@@ -88,16 +87,20 @@ def prob_last_n_near_unanimous(theta, r, alpha, beta, agent_count, initial_m, ta
 
     For the other parameters, see the documentation of `sim_complex`.
     """
-    prob = clib.prob_last_n_near_unanimous(
-            ctypes.c_double(theta),
-            ctypes.c_double(r),
-            ctypes.c_double(alpha),
-            ctypes.c_double(beta),
-            ctypes.c_int(agent_count),
-            ctypes.c_double(initial_m),
-            ctypes.c_int(tail_count),
-            ctypes.c_int(num_reps),
-            ctypes.c_int(int(math.ceil((1-frac_required)*tail_count)))
+    prob = ctypes.c_double()
+    err = ctypes.c_double()
+    clib.prob_last_n_near_unanimous(
+        ctypes.c_double(theta),
+        ctypes.c_double(r),
+        ctypes.c_double(alpha),
+        ctypes.c_double(beta),
+        ctypes.c_int(agent_count),
+        ctypes.c_double(initial_m),
+        ctypes.c_int(tail_count),
+        ctypes.c_int(num_reps),
+        ctypes.c_int(int(math.ceil((1-frac_required)*tail_count))),
+        ctypes.c_int(min_successful_reps),
+        ctypes.byref(prob),
+        ctypes.byref(err),
     )
-    err = (prob * (1-prob) / num_reps) ** .5
-    return prob, err
+    return prob.value, err.value
