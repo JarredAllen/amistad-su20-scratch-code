@@ -140,6 +140,6 @@ void prob_last_n_near_unanimous(double theta, double r, double alpha, double bet
 void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {
     int i;
     for (i=0; i < num_values; i++) {
-        result[i] = 1.96 * sqrt(values[i]*(1-values[i])/num_trials);
+        result[i] = sqrt(values[i]*(1-values[i])/num_trials);
     }
 }
