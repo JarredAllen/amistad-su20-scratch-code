@@ -74,6 +74,31 @@ def prob_last_n_unanimous(theta, r, alpha, beta, agent_count, initial_m, tail_co
     err = (prob * (1-prob) / num_reps) ** .5
     return prob, err
 
+clib.prob_last_n_unanimous_with_fanout.restype = ctypes.c_double
+def prob_last_n_unanimous_with_fanout(theta, r, alpha, beta, agent_count, initial_m, tail_count, num_full_reps, tail_fanout):
+    """Runs the simulation `num_reps` times, and finds the probability
+    that, after `agent_count` witnesses have given their testimony, that
+    all of the next `tail_count` witnesses all affirm the hypothesis.
+
+    It returns a tuple consisting of the simulated probability and the
+    error on that (1 sigma).
+
+    For the other parameters, see the documentation of `sim_complex`.
+    """
+    prob = clib.prob_last_n_unanimous(
+        ctypes.c_double(theta),
+        ctypes.c_double(r),
+        ctypes.c_double(alpha),
+        ctypes.c_double(beta),
+        ctypes.c_int(agent_count),
+        ctypes.c_double(initial_m),
+        ctypes.c_int(tail_count),
+        ctypes.c_int(num_full_reps),
+        ctypes.c_int(tail_fanout),
+    )
+    err = (prob * (1-prob) / num_reps) ** .5
+    return prob, err
+
 last_n_near_unanimous = clib.last_n_near_unanimous
 last_n_near_unanimous.restype = ctypes.c_char
 
@@ -98,6 +123,39 @@ def prob_last_n_near_unanimous(theta, r, alpha, beta, agent_count, initial_m, ta
         ctypes.c_double(initial_m),
         ctypes.c_int(tail_count),
         ctypes.c_int(num_reps),
+        ctypes.c_int(int(math.ceil((1-frac_required)*tail_count))),
+        ctypes.c_int(min_successful_reps),
+        ctypes.byref(prob),
+        ctypes.byref(err),
+    )
+    return prob.value, err.value
+
+def prob_last_n_near_unanimous_with_fanout(theta, r, alpha, beta, agent_count, initial_m, tail_count, num_full_reps, tail_fanout, frac_required, min_successful_reps=0):
+    """Runs the simulation `num_reps` times, and finds the probability
+    that, after `agent_count` witnesses have given their testimony, that
+    all of the next `tail_count` witnesses all affirm the hypothesis.
+
+    It returns a tuple consisting of the simulated probability and the
+    error on that (1 sigma).
+
+    It will run the simulation num_full_reps*tail_fanout times,
+    recomputing the initial people (before a consensus is considered)
+    after each tail_fanout iterations.
+
+    For the other parameters, see the documentation of `sim_complex`.
+    """
+    prob = ctypes.c_double()
+    err = ctypes.c_double()
+    clib.prob_last_n_near_unanimous_with_fanout(
+        ctypes.c_double(theta),
+        ctypes.c_double(r),
+        ctypes.c_double(alpha),
+        ctypes.c_double(beta),
+        ctypes.c_int(agent_count),
+        ctypes.c_double(initial_m),
+        ctypes.c_int(tail_count),
+        ctypes.c_int(num_full_reps),
+        ctypes.c_int(tail_fanout),
         ctypes.c_int(int(math.ceil((1-frac_required)*tail_count))),
         ctypes.c_int(min_successful_reps),
         ctypes.byref(prob),
