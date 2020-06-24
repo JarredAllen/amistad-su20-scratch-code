@@ -108,7 +108,7 @@ double prob_last_n_unanimous(double theta, double r, double alpha, double beta, 
     return ans;
 }
 
-double prob_last_n_unanimous_fanout(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout) {
+void prob_last_n_unanimous_with_fanout(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout, int min_successful_reps, double* prob_out, double* err_out) {
     int i, j;
     int successes = 0;
     double ans;
@@ -121,8 +121,18 @@ double prob_last_n_unanimous_fanout(double theta, double r, double alpha, double
             }
         }
     }
+    while (successes < min_successful_reps) {
+        current_m = sim_complex_get_m(theta, alpha, beta, r, agent_count, initial_m);
+        for (j = 0; j < tail_fanout; j++) {
+            if (last_n_unanimous(theta, r, alpha, beta, 0, current_m, tail_count)) {
+                successes++;
+            }
+        }
+        num_full_reps++;
+    }
     ans = ((double) successes) / (num_full_reps * tail_fanout);
-    return ans;
+    *prob_out = ans;
+    *err_out = sqrt(ans*(1-ans) / (num_full_reps * tail_fanout));
 }
 
 char last_n_near_unanimous(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count, int reject_allowance) {
@@ -182,6 +192,75 @@ void prob_last_n_near_unanimous_with_fanout(double theta, double r, double alpha
         current_m = sim_complex_get_m(theta, alpha, beta, r, agent_count, initial_m);
         for (j = 0; j < tail_fanout; j++) {
             if (last_n_near_unanimous(theta, r, alpha, beta, 0, current_m, tail_count, reject_allowance)) {
+                successes++;
+            }
+        }
+        num_full_reps++;
+    }
+    *prob_out = ((double) successes) / (num_full_reps * tail_fanout);
+    *err_out = sqrt(*prob_out*(1.0 - *prob_out) / (num_full_reps * tail_fanout));
+}
+
+char last_n_near_unanimous_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count, int reject_allowance) {
+    double m = intial_m;
+    int i;
+    char response;
+    char required_response;
+    for (i=0; i < agent_count; i++) {
+        response = get_agent_choice_complex(m, theta, alpha, beta);
+        m = m*(1-r) + response*r;
+    }
+    required_response = get_agent_choice_complex(m, theta, alpha, beta);
+        m = m*(1-r) + required_response*r;
+    for (i=0; i < tail_count-1; i++) {
+        response = get_agent_choice_complex(m, theta, alpha, beta);
+        if (response != required_response) {
+            reject_allowance--;
+            if (reject_allowance <= 0) {
+                return 0;
+            }
+        }
+        m = m*(1-r) + response*r;
+    }
+    return 1;
+}
+
+void prob_last_n_near_unanimous_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
+    int i;
+    int successes = 0;
+    double ans;
+    for (i = 0; i < num_reps; i++) {
+        if (last_n_near_unanimous_bidirectional(theta, r, alpha, beta, agent_count, initial_m, tail_count, reject_allowance)) {
+            successes++;
+        }
+    }
+    while (successes < min_successful_reps) {
+        if (last_n_near_unanimous_bidirectional(theta, r, alpha, beta, agent_count, initial_m, tail_count, reject_allowance)) {
+            successes++;
+        }
+        num_reps++;
+    }
+    *prob_out = ((double) successes) / num_reps;
+    *err_out = sqrt(*prob_out*(1.0 - *prob_out) / num_reps);
+}
+
+void prob_last_n_near_unanimous_with_fanout_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
+    int i, j;
+    int successes = 0;
+    double ans;
+    double current_m;
+    for (i = 0; i < num_full_reps; i++) {
+        current_m = sim_complex_get_m(theta, alpha, beta, r, agent_count, initial_m);
+        for (j = 0; j < tail_fanout; j++) {
+            if (last_n_near_unanimous_bidirectional(theta, r, alpha, beta, 0, current_m, tail_count, reject_allowance)) {
+                successes++;
+            }
+        }
+    }
+    while (successes < min_successful_reps) {
+        current_m = sim_complex_get_m(theta, alpha, beta, r, agent_count, initial_m);
+        for (j = 0; j < tail_fanout; j++) {
+            if (last_n_near_unanimous_bidirectional(theta, r, alpha, beta, 0, current_m, tail_count, reject_allowance)) {
                 successes++;
             }
         }

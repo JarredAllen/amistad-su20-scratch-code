@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 
 from basic_sim import g
 from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates, \
-        prob_last_n_unanimou_with_fanout, sprob_last_n_unanimous, prob_last_n_near_unanimous, prob_last_n_near_unanimous_with_fanout
+        prob_last_n_unanimous_with_fanout, prob_last_n_unanimous, prob_last_n_near_unanimous, prob_last_n_near_unanimous_with_fanout, \
+        prob_last_n_near_unanimous_with_fanout_bidirectional
 
 process_executor = futures.ProcessPoolExecutor()
 
@@ -131,7 +132,7 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
     plt.clf()
 
 def prob_from_args(args):
-    return prob_last_n_unanimous(*args)
+    return prob_last_n_unanimous_with_fanout(*args)
 def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None, tail_fanout=100):
     def phle_from_probs(prob, error, ph):
         peh = pt*ph
@@ -168,7 +169,7 @@ def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, nu
     plt.plot(lambdas, probs, marker=',')
     shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
     plt.xlabel('$\\lambda$')
-    plt.ylabel('Probability of Consensus')
+    plt.ylabel('Probability of Consensus Affirming')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
     else: plt.savefig(save_file)
@@ -186,6 +187,45 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
     plt.plot(lambdas, probs, marker=',')
     shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
     plt.xlabel('$\\lambda$')
+    plt.ylabel('Probability of Near Consensus Affirming')
+    plt.xlim(0, 1)
+    if save_file is None: plt.show()
+    else: plt.savefig(save_file)
+    plt.clf()
+
+def prob_near_unanimous_bidirectional_from_args(args):
+    return prob_last_n_near_unanimous_with_fanout_bidirectional(*args)
+def plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(lambdas, pfs, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16, tail_fanout=10):
+    if plot_log:
+        fig, ax = plt.subplots()
+        ax.set_yscale("log")
+    for pf in pfs:
+        probs, error_bars = map(np.array, zip(*process_executor.map(prob_near_unanimous_bidirectional_from_args, [
+            (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps // tail_fanout, tail_fanout, frac_required, min_successful_reps)
+            for l in lambdas
+        ])))
+        plt.plot(lambdas, probs, label=f'$p_f = {pf}$')
+        shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
+    plt.legend()
+    plt.xlabel('$\\lambda$')
+    plt.ylabel('Probability of Near Consensus')
+    plt.xlim(0, 1)
+    if save_file is None: plt.show()
+    else: plt.savefig(save_file)
+    plt.clf()
+def plot_prob_of_near_bidirectional_consensus_xaxis_pfs(lambdas, pfs, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16, tail_fanout=10):
+    if plot_log:
+        fig, ax = plt.subplots()
+        ax.set_yscale("log")
+    for lbd in lambdas:
+        probs, error_bars = map(np.array, zip(*process_executor.map(prob_near_unanimous_bidirectional_from_args, [
+            (theta, r, (1-lbd)*pf, pf + (1-pf)*lbd, agent_count, initial, N, num_reps // tail_fanout, tail_fanout, frac_required, min_successful_reps)
+            for pf in pfs
+        ])))
+        plt.plot(pfs, probs, label=f'$\lambda = {lbd}$')
+        shade_error_region(pfs, probs, error_bars * 1.96, alpha=0.5)
+    plt.legend()
+    plt.xlabel('$p_f$')
     plt.ylabel('Probability of Near Consensus')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
@@ -195,41 +235,44 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
 def setup_plot_style():
     plt.style.use('ggplot')
     from cycler import cycler
-    style_cycler = cycler(color=['#eb3d02', '#ff0dff', '#0004e8', '#ffba00', '#00b800'])
-    style_cycler += cycler(marker=['o', '^', 's', 'P', '*'])
+    style_cycler = cycler(color=['#324dbe', '#248ea6', '#25c7d9', '#f2d338', '#f2762e', '#f23030'])
+    style_cycler += cycler(marker=['o', '^', 's', 'P', '*', 'v'])
     style_cycler *= cycler(markevery=[0.2])
     plt.rc('axes', prop_cycle=style_cycler)
 
 def main():
     setup_plot_style()
 
-    plot_g([1, 5, 10, 30, 100], save_file='../plots/g-vs-theta.pdf')
-    visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=10000, save_file='../plots/simple-dependence-agreement.pdf')
-    visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
-    print('Simple Majority Vote Done!')
+    # plot_g([1, 5, 10, 30, 100], save_file='../plots/g-vs-theta.pdf')
+    # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=10000, save_file='../plots/simple-dependence-agreement.pdf')
+    # visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
+    # print('Simple Majority Vote Done!')
+# 
+    # r_vs_majority_time(save_file='../plots/r-vs-majority-time.pdf')
+    # weights_vs_r([0.4, 0.3, 0.2, 0.1, 0.001], np.arange(1, 50, 1), save_file='../plots/weight-function.pdf')
+    # print('Recent Majority Vote Done!')
+# 
+    # ep_betas = [0.5, 0.75, 0.9, 0.95, 1.0]
+    # plot_prob_affirm_vs_position(ep_betas, save_file='../plots/beta-vs-affirm-rate-over-time.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.5, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-half.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, agent_count=2000, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority-long.pdf')
+    # print('External Pressure Done!')
 
-    r_vs_majority_time(save_file='../plots/r-vs-majority-time.pdf')
-    weights_vs_r([0.4, 0.3, 0.2, 0.1, 0.001], np.arange(1, 50, 1), save_file='../plots/weight-function.pdf')
-    print('Recent Majority Vote Done!')
+    # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 5.0, 0.035, 1600, 80000, tail_fanout=20, save_file='../plots/sod-h-given-e.pdf')
+    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=True, tail_fanout=20, save_file='../plots/sod-pconsensus-log.pdf')
+    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=False, tail_fanout=20, save_file='../plots/sod-pconsensus-linear.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0,1,50), 0.9, 120, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-3-linear.pdf', plot_log=False)
+    # print('Spectrum of Dependence Done!')
 
-    ep_betas = [0.5, 0.75, 0.9, 0.95, 1.0]
-    plot_prob_affirm_vs_position(ep_betas, save_file='../plots/beta-vs-affirm-rate-over-time.pdf')
-    plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.5, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-half.pdf')
-    plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority.pdf')
-    plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, agent_count=2000, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority-long.pdf')
-    print('External Pressure Done!')
-
-    plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 5.0, 0.035, 1600, 80000, save_file='../plots/sod-h-given-e.pdf')
-    plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=True, save_file='../plots/sod-pconsensus-log.pdf')
-    plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=False, save_file='../plots/sod-pconsensus-linear.pdf')
-    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
-    print('1 plot done')
-    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
-    print('2 plots done')
-    plot_prob_of_near_consensus_for_lambdas(np.linspace(0,1,50), 0.9, 120, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
-    print('3 plots done')
-    plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-3-linear.pdf', plot_log=False)
-    print('Spectrum of Dependence Done!')
+    plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-linear.pdf', plot_log=False)
+    plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-log.pdf')
+    plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-linear.pdf', plot_log=False)
+    plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-log.pdf')
+    print('Overall Consensus Probability Done!')
 
 if __name__ == '__main__':
     main()
