@@ -5,9 +5,12 @@ import matplotlib.pyplot as plt
 from basic_sim import g
 from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates, \
         prob_last_n_unanimous_with_fanout, prob_last_n_unanimous, prob_last_n_near_unanimous, prob_last_n_near_unanimous_with_fanout, \
-        prob_last_n_near_unanimous_with_fanout_bidirectional
+        prob_last_n_near_unanimous_with_fanout_bidirectional, many_simulate_complex_get_ws
 
 process_executor = futures.ProcessPoolExecutor()
+
+# Remove excess whitespace from the figures when saving
+savefig_args = {'bbox_inches': 'tight', 'pad_inches': 0}
 
 def plot_g(thetas, save_file=None):
     """For each value of theta in the given list, it produces a plot of
@@ -22,7 +25,7 @@ def plot_g(thetas, save_file=None):
     plt.ylabel('$g_\\theta(x)$')
     plt.legend()
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def r_vs_majority_time(xlog=False, ylog=False, save_file=None):
@@ -43,9 +46,9 @@ def r_vs_majority_time(xlog=False, ylog=False, save_file=None):
         ax.grid(which='minor', linewidth=0.3)
         ax.grid(which='major', linewidth=0.8)
     ax.set_xlabel("Value of 1-r")
-    ax.plot(1-xs, ys, marker=',')
+    ax.plot(1-xs, ys, marker=',', color='#324dbe')
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def weights_vs_r(rvals, xvals, save_file=None):
@@ -56,7 +59,7 @@ def weights_vs_r(rvals, xvals, save_file=None):
     plt.ylabel('$w(r, \\delta)$')
     plt.legend()
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def shade_error_region(xs, ys, errors, *args, **kwargs):
@@ -79,7 +82,7 @@ def visualize_agreement(thetas, agent_count=500, num_reps=3500, save_file=None):
     plt.xlabel('Witness number')
     plt.ylabel('Probability of witness agreeing with previous')
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def compute_counts_for_args(args):
@@ -100,7 +103,7 @@ def plot_prob_affirm_vs_position(betas, theta=2.0, r=0.035, alpha=0.0, agent_cou
     plt.xlabel('Witness number')
     plt.ylabel('Probability of affirming')
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent_count=400, num_reps=5000, initial_g=0.5, save_file=None):
@@ -128,7 +131,71 @@ def plot_prob_affirm_vs_position_with_initial_g(betas, theta=2.0, r=0.035, agent
     plt.xlabel('Witness number')
     plt.ylabel('Probability of affirming')
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
+    plt.clf()
+
+def plot_affirm_rate_each_trial(alpha=0.0, beta=1.0, theta=10.0, r=0.035, agent_count=200, num_reps=250, initial_w=0.5, initial_g=None, save_file=None, plot_w=True):
+    """Plot the results of each trial as a thin line, so tendencies can
+    be noticed.
+
+    If a value is providded for `initial_g`, then the initial value of W
+    is determined for the specified value of g for the first witness.
+    Otherwise, the value of `initial_w` is used.
+
+    If plot_w is True, then the value of W will be plotted. Otherwise,
+    the value of g(w) will be plotted.
+    """
+    def g(w):
+        f = lambda theta, m: 1. / (1 + np.exp(theta * (m-0.5)))
+        plain_g = (f(theta, w) - f(theta, 0))/(f(theta, 1) - f(theta, 0))
+        return alpha + plain_g*(beta-alpha)
+    if initial_g is not None:
+        if initial_w != 0.5:
+            print('Warning: initial_w was specified but ignored, because initial_g was also specified.')
+            print('     in: `plot_affirm_rate_each_trial`')
+        if beta <= initial_g:
+            initial_w = 1
+        else:
+            initial_w = (np.log(np.exp(theta/2)) + np.log(beta + initial_g*(np.exp(theta/2)-1)) - np.log((beta-initial_g)*np.exp(theta/2)+initial_g))/theta
+    sims = many_simulate_complex_get_ws(theta, r, alpha, beta, agent_count, num_reps, initial_w)
+    xs = np.arange(0, agent_count+1, 1)
+    for sim in sims:
+        if plot_w:plt.plot(xs, sim, color='#324dbe', marker='', linewidth=0.1)
+        else: plt.plot(xs, g(sim), color='#324dbe', marker='', linewidth=0.1)
+    if plot_w: plt.ylabel('$W_i$')
+    else: plt.ylabel(f'$g_{{{theta},{alpha},{beta}}}(W_i)$')
+    plt.xlabel('Witness number')
+    if save_file is None: plt.show()
+    else: plt.savefig(save_file, **savefig_args)
+    plt.clf()
+
+def plot_expected_overall_and_individuals(alpha=0.0, beta=1.0, theta=10.0, r=0.035, agent_count=200, num_reps=250, initial_w=0.5, save_file=None, lower_bias=1, upper_bias=1):
+    def g(w):
+        f = lambda theta, m: 1. / (1 + np.exp(theta * (m-0.5)))
+        plain_g = (f(theta, w) - f(theta, 0))/(f(theta, 1) - f(theta, 0))
+        return alpha + plain_g*(beta-alpha)
+    sims = many_simulate_complex_get_ws(theta, r, alpha, beta, agent_count, num_reps, initial_w)
+    xs = np.arange(0, agent_count+1, 1)
+    from random import random
+    counted_runs = []
+    for sim in sims:
+        if sim[-1] <= 0.5:
+            if random() < lower_bias:
+                counted_runs.append(g(sim))
+            else:
+                continue
+        else:
+            if random() < upper_bias:
+                counted_runs.append(g(sim))
+            else:
+                continue
+        plt.plot(xs, sim, color='#324dbe', marker='', linewidth=0.1)
+    average = np.array([sum(run[i] for run in counted_runs)/len(counted_runs) for i in range(len(sims[0]))])
+    plt.plot(xs, average, color='k', marker='')
+    plt.ylabel('$W_i$')
+    plt.xlabel('Witness number')
+    if save_file is None: plt.show()
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def prob_from_args(args):
@@ -156,7 +223,7 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
     # plt.ylim(0, 1)
     plt.legend()
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None, tail_fanout=100):
@@ -166,13 +233,13 @@ def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, nu
     ])))
     fig, ax = plt.subplots()
     if plot_log: ax.set_yscale("log")
-    plt.plot(lambdas, probs, marker=',')
-    shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
+    plt.plot(lambdas, probs, marker=',', color='#324dbe')
+    shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5, color='#324dbe')
     plt.xlabel('$\\lambda$')
     plt.ylabel('Probability of Consensus Affirming')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def prob_near_unanimous_from_args(args):
@@ -184,13 +251,13 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
     ])))
     fig, ax = plt.subplots()
     if plot_log: ax.set_yscale("log")
-    plt.plot(lambdas, probs, marker=',')
-    shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5)
+    plt.plot(lambdas, probs, marker=',', color='#324dbe')
+    shade_error_region(lambdas, probs, error_bars * 1.96, alpha=0.5, color='#324dbe')
     plt.xlabel('$\\lambda$')
     plt.ylabel('Probability of Near Consensus Affirming')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def prob_near_unanimous_bidirectional_from_args(args):
@@ -211,7 +278,7 @@ def plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(lambdas, pfs, N, the
     plt.ylabel('Probability of Near Consensus')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 def plot_prob_of_near_bidirectional_consensus_xaxis_pfs(lambdas, pfs, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16, tail_fanout=10):
     if plot_log:
@@ -229,13 +296,15 @@ def plot_prob_of_near_bidirectional_consensus_xaxis_pfs(lambdas, pfs, N, theta, 
     plt.ylabel('Probability of Near Consensus')
     plt.xlim(0, 1)
     if save_file is None: plt.show()
-    else: plt.savefig(save_file)
+    else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def setup_plot_style():
     plt.style.use('ggplot')
     from cycler import cycler
-    style_cycler = cycler(color=['#324dbe', '#248ea6', '#25c7d9', '#f2d338', '#f2762e', '#f23030'])
+    # Setup colors
+    style_cycler = cycler(color=['#f23030', '#f2762e', '#f2d338', '#25c7d9', '#248ea6', '#324dbe'])
+    # Add markers to help colorblind people/people with greyscale printouts
     style_cycler += cycler(marker=['o', '^', 's', 'P', '*', 'v'])
     style_cycler *= cycler(markevery=[0.2])
     plt.rc('axes', prop_cycle=style_cycler)
@@ -252,27 +321,38 @@ def main():
     # weights_vs_r([0.4, 0.3, 0.2, 0.1, 0.001], np.arange(1, 50, 1), save_file='../plots/weight-function.pdf')
     # print('Recent Majority Vote Done!')
 # 
-    # ep_betas = [0.5, 0.75, 0.9, 0.95, 1.0]
-    # plot_prob_affirm_vs_position(ep_betas, save_file='../plots/beta-vs-affirm-rate-over-time.pdf')
-    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.5, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-half.pdf')
-    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority.pdf')
-    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=2.0, initial_g=0.7, agent_count=2000, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority-long.pdf')
+    ep_betas = [0.5, 0.75, 0.9, 0.95, 1.0]
+    plot_prob_affirm_vs_position(ep_betas, save_file='../plots/beta-vs-affirm-rate-over-time.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=10.0, initial_g=0.5, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-half.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=10.0, initial_g=0.7, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority.pdf')
+    # plot_prob_affirm_vs_position_with_initial_g(ep_betas, theta=10.0, initial_g=0.7, agent_count=2000, save_file='../plots/beta-vs-affirm-rate-over-time-initial-g-majority-long.pdf')
     # print('External Pressure Done!')
-
-    # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 5.0, 0.035, 1600, 80000, tail_fanout=20, save_file='../plots/sod-h-given-e.pdf')
-    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=True, tail_fanout=20, save_file='../plots/sod-pconsensus-log.pdf')
-    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 5.0, 0.035, 1600, 150000, plot_log=False, tail_fanout=20, save_file='../plots/sod-pconsensus-linear.pdf')
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 5.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0,1,50), 0.9, 120, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
-    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 5.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-3-linear.pdf', plot_log=False)
+# 
+    # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 10.0, 0.035, 1600, 80000, tail_fanout=20, save_file='../plots/sod-h-given-e.pdf')
+    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=True, tail_fanout=20, save_file='../plots/sod-pconsensus-log.pdf')
+    # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=False, tail_fanout=20, save_file='../plots/sod-pconsensus-linear.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 50), 0.9, 120, 10.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
+    # plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 100), 0.95, 150, 10.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-3-linear.pdf', plot_log=False)
     # print('Spectrum of Dependence Done!')
+# 
+    # plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 10.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-linear.pdf', plot_log=False)
+    # plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 10.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-log.pdf')
+    # plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 10.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-linear.pdf', plot_log=False)
+    # plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 10.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-log.pdf')
+    # print('Overall Consensus Probability Done!')
 
-    plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-linear.pdf', plot_log=False)
-    plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(np.linspace(0, 1, 100), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xlambdas-log.pdf')
-    plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-linear.pdf', plot_log=False)
-    plot_prob_of_near_bidirectional_consensus_xaxis_pfs([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], np.linspace(0, 1, 100), 20, 5.0, 0.035, 1600, 240000, .9, save_file='../plots/sod-bidirectional-xpfs-log.pdf')
-    print('Overall Consensus Probability Done!')
+    # plot_affirm_rate_each_trial(beta=0.5, initial_g=0.5, plot_w=False, save_file='../plots/each-run-affirm-beta-5-g.pdf')
+    # plot_affirm_rate_each_trial(beta=0.5, initial_g=0.5, save_file='../plots/each-run-affirm-beta-5.pdf')
+    # plot_affirm_rate_each_trial(beta=0.95, initial_g=0.5, agent_count=400, save_file='../plots/each-run-affirm-beta-95-g-half.pdf')
+    # plot_affirm_rate_each_trial(beta=0.95, agent_count=400, save_file='../plots/each-run-affirm-beta-95-w-half.pdf')
+    # plot_affirm_rate_each_trial(beta=0.9, initial_g=0.5, agent_count=400, save_file='../plots/each-run-affirm-beta-9-g-half.pdf')
+    # plot_affirm_rate_each_trial(beta=0.9, agent_count=400, save_file='../plots/each-run-affirm-beta-9-w-half.pdf')
+    # plot_expected_overall_and_individuals(beta=0.9, agent_count=400, save_file='../plots/each-run-affirm-beta-9-upper-all.pdf')
+    # plot_expected_overall_and_individuals(beta=0.9, agent_count=400, save_file='../plots/each-run-affirm-beta-9-upper-most.pdf', upper_bias=0.7)
+    # plot_expected_overall_and_individuals(beta=0.9, agent_count=400, save_file='../plots/each-run-affirm-beta-9-upper-half.pdf', upper_bias=0.5)
+    # plot_expected_overall_and_individuals(beta=0.9, agent_count=400, save_file='../plots/each-run-affirm-beta-9-upper-few.pdf', upper_bias=0.3)
 
 if __name__ == '__main__':
     main()

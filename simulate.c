@@ -66,6 +66,18 @@ void sim_complex(char* result, double theta, double alpha, double beta, double r
     }
 }
 
+void sim_complex_get_ws(double* result, double theta, double alpha, double beta, double r, int agent_count, double initial_w) {
+    int i;
+    char response;
+    double w = initial_w;
+    for (i=0; i < agent_count; i++) {
+        result[i] = w;
+        response = get_agent_choice_complex(w, theta, alpha, beta);
+        w = w*(1-r) + response*r;
+    }
+    result[agent_count] = w;
+}
+
 double sim_complex_get_m(double theta, double alpha, double beta, double r, int agent_count, double initial_m) {
     int i;
     char response;

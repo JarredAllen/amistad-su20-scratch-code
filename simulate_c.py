@@ -47,6 +47,23 @@ def many_simulate_complex(theta, r, alpha, beta, agent_count, num_sims, initial_
     """
     return [sim_complex(theta, r, alpha, beta, agent_count, initial_m) for _ in range(num_sims)]
 
+def sim_complex_get_ws(theta, r, alpha, beta, agent_count, initial_w=0.5):
+    """Like `sim_complex`, but returns the value of w at each witness
+    instead of their vote.
+    """
+    buf = np.empty(agent_count+1, dtype=np.float64)
+    clib.sim_complex_get_ws(ctypes.c_void_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_double(r), ctypes.c_int(agent_count), ctypes.c_double(initial_w))
+    return buf
+
+def many_simulate_complex_get_ws(theta, r, alpha, beta, agent_count, num_sims, initial_w=0.5):
+    """Run many iterations of the complex simulation (including Recent
+    Majority Vote and External Pressure) and return them as a list.
+
+    `num_sims` is the number of times to run it. See the documentation
+    of `sim_complex` for the other arguments.
+    """
+    return np.array([sim_complex_get_ws(theta, r, alpha, beta, agent_count, initial_w) for _ in range(num_sims)])
+
 def compute_error_estimates(data, num_trials):
     """Computes estimates on the error bars by using the formula
     1.96*sqrt(p*(1-p)/n)
