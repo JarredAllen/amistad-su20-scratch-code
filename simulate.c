@@ -16,6 +16,8 @@ pthread_mutex_t rand_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Returns 1 if the agent chooses to affirm, 0 if the agent chooses to
 // reject
+//
+// It relies on rand(), so it might not work as well on other platforms.
 char get_agent_choice(double m, double theta) {
     int rng;
     pthread_mutex_lock(&rand_lock);
