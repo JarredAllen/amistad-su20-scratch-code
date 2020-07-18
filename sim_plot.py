@@ -19,8 +19,8 @@ def plot_g(thetas, save_file=None):
     """
     xs = np.linspace(0, 1, 1000)
     for theta in thetas:
-        plt.plot(xs, g(xs, theta), label=f'theta = {theta}')
-    plt.title('Plots of g for different values of theta')
+        plt.plot(xs, g(xs, theta), label=f'$\\theta$ = {theta}')
+    plt.title('Plots of $g$ for different values of $\\theta$')
     plt.xlabel('$x$')
     plt.ylabel('$g_\\theta(x)$')
     plt.legend()
