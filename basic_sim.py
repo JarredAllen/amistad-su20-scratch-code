@@ -10,6 +10,9 @@ def g(m, theta):
     """Zero-one rescaling of `f`"""
     return (f(m, theta) - f(0, theta)) / (f(1, theta) - f(0, theta))
 
+def g_external_pressure(m, theta, alpha, beta):
+    return (beta-alpha)*g(m, theta) + alpha
+
 def get_agent_choice(m, theta):
     """Simulates an agent deciding to say yes or no. Returns True iff
     the agent decides to say yes.
