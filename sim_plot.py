@@ -9,7 +9,7 @@ from simulate_c import many_simulate_complex, many_simulate_basic, compute_error
         prob_last_n_unanimous_with_fanout, prob_last_n_unanimous, prob_last_n_near_unanimous, prob_last_n_near_unanimous_with_fanout, \
         prob_last_n_near_unanimous_with_fanout_bidirectional, many_simulate_complex_get_ws
 
-process_executor = futures.ProcessPoolExecutor()
+process_executor = futures.ProcessPoolExecutor(max_workers=20)
 
 # Remove excess whitespace from the figures when saving
 savefig_args = {'bbox_inches': 'tight', 'pad_inches': 0}
@@ -99,7 +99,7 @@ def plot_prob_affirm_vs_position(alphas, theta=2.0, r=0.035, beta=1.0, agent_cou
         plt.plot(xs, sim, label=f'\u03b1 = {alpha}')
         shade_error_region(xs, sim, compute_error_estimates(sim, num_reps), alpha=0.5)
     plt.xlim(0, agent_count)
-    plt.ylim(0, 1)
+    # plt.ylim(0, 1)
     plt.legend()
     plt.title('\u03b1 vs. likelihood of witness affirming')
     plt.xlabel('Witness number')
@@ -163,7 +163,7 @@ def plot_prob_affirm_vs_position_with_initial_g(alphas, theta=2.0, r=0.035, beta
         plt.plot(xs, sim, label=f'\u03b1 = {alpha}')
         shade_error_region(xs, sim, compute_error_estimates(sim, num_reps), alpha=0.5)
     plt.xlim(0, agent_count)
-    plt.ylim(0, 1)
+    # plt.ylim(0, 1)
     plt.legend()
     plt.title('\u03b1 vs. likelihood of witness affirming')
     plt.xlabel('Witness number')
@@ -380,6 +380,7 @@ def main(sections=AllContainer()):
 
     if 'spectrum' in sections:
         plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 10.0, 0.035, 1600, 80000, tail_fanout=20, save_file='../plots/sod-h-given-e.pdf')
+        # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 40), [.5, 1e-3, 1e-5, 1e-7, 1e-8, 1e-9], 0.25, 0.5, 13, 10.0, 0.035, 1600, 100000, tail_fanout=250, save_file='../plots/sod-h-given-e-small-pf.pdf')
         plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=True, tail_fanout=20, save_file='../plots/sod-pconsensus-log.pdf')
         plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=False, tail_fanout=20, save_file='../plots/sod-pconsensus-linear.pdf')
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
