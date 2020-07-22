@@ -80,9 +80,9 @@ def visualize_agreement(thetas, agent_count=500, num_reps=3500, save_file=None):
         shade_error_region(xs, agree_odds, errors, alpha=0.5)
     plt.xlim(1, agent_count)
     plt.legend()
-    plt.title('Evolution of Agreement among witnesses')
-    plt.xlabel('Witness number')
-    plt.ylabel('Probability of witness agreeing with previous')
+    plt.title('Evolution of Agreement Among Witnesses')
+    plt.xlabel('Witness Number')
+    plt.ylabel('Probability of Witness Agreeing with Previous')
     if save_file is None: plt.show()
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
@@ -355,8 +355,8 @@ def main(sections=AllContainer()):
 
     if 'polarized' in sections:
         plot_g([1, 5, 10, 30, 100], save_file='../plots/g-vs-theta.pdf')
-        visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=100, num_reps=10000, save_file='../plots/simple-dependence-agreement.pdf')
-        visualize_agreement([2.0, 5.0, 7.0, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
+        visualize_agreement([2, 5, 7, 10, 20], agent_count=100, num_reps=10000, save_file='../plots/simple-dependence-agreement.pdf')
+        # visualize_agreement([2, 5, 7, 10, 20], agent_count=1000, num_reps=25000, save_file='../plots/simple-dependence-agreement-long.pdf')
         print('Polarized Majority Vote Done!')
 
     if 'recent' in sections:
