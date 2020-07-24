@@ -31,6 +31,9 @@ def plot_g(thetas, save_file=None):
     plt.clf()
 
 def r_vs_majority_time(xlog=False, ylog=False, save_file=None):
+    """Plots the minimum number of witnesses needed to overturn a
+    majority as a function of the value of r.
+    """
     xs = np.linspace(0, 0.5, 2000)[1:]
     ys = np.ceil(np.log(0.5)/np.log(1-xs))
     fig, ax = plt.subplots()
@@ -54,6 +57,9 @@ def r_vs_majority_time(xlog=False, ylog=False, save_file=None):
     plt.clf()
 
 def weights_vs_r(rvals, xvals, save_file=None):
+    """Plots the weighting function for the recent majority vote model
+    over the given `xvals`. This is repeated for each value in `rvals`.
+    """
     for rval in rvals:
         plt.plot(xvals, rval*np.power(1-rval, xvals-1), label=f'r={rval}')
     plt.title('Weighting decay for different values of r')
@@ -65,9 +71,15 @@ def weights_vs_r(rvals, xvals, save_file=None):
     plt.clf()
 
 def shade_error_region(xs, ys, errors, *args, **kwargs):
+    """Shades the given error bars above/below each x/y point. Used
+    for error bars in the figures with uncertainty.
+    """
     plt.fill_between(xs, ys-errors, ys+errors, in_layout=True, *args, **kwargs)
 
 def compute_agree_odds(args):
+    """Helper function to appease ProcessPoolExecutor's inability to
+    send lambdas.
+    """
     theta, agent_count, num_reps = args
     sims = many_simulate_basic(theta, agent_count, num_reps)
     return np.array([sum(sim[i] == sim[i-1] for sim in sims) / num_reps for i in range(1, agent_count)])
@@ -88,11 +100,17 @@ def visualize_agreement(thetas, agent_count=500, num_reps=3500, save_file=None):
     plt.clf()
 
 def compute_counts_for_args(args):
+    """Helper function to appease ProcessPoolExecutor's inability to
+    send lambdas.
+    """
     theta, r, alpha, beta, agent_count, num_reps, initial = args
     sim_res = many_simulate_complex(theta, r, alpha, beta, agent_count, num_reps, initial_m=initial)
     freqs = np.array([sum(sim[i] for sim in sim_res) / num_reps for i in range(agent_count)])
     return freqs
 def plot_prob_affirm_vs_position(alphas, theta=2.0, r=0.035, beta=1.0, agent_count=400, num_reps=3500, initial=0.5, save_file=None):
+    """Plots the probability that a witness will affirm vs their number
+    in the list, for the given values of alpha.
+    """
     sims = process_executor.map(compute_counts_for_args, [(theta, r, alpha, beta, agent_count, num_reps, initial) for alpha in alphas])
     xs = np.arange(1, agent_count+1, 1)
     for sim, alpha in zip(sims, alphas):
@@ -108,36 +126,21 @@ def plot_prob_affirm_vs_position(alphas, theta=2.0, r=0.035, beta=1.0, agent_cou
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
-# def compute_initial_m_from_beta(beta, theta, initial_g):
-    # # wolfram|alpha (I used this query to solve for the initial value of M
-    # # https://www.wolframalpha.com/input/?i=solve+1%2F%281%2Bexp%28-t*%28M-0.5%29%29%29+%3D+f%2Fb+*+%281%2F%281%2Bexp%28-t%2F2%29%29+-+1%2F%281%2Bexp%28t%2F2%29%29%29+%2B+1%2F%281%2Bexp%28t%2F2%29%29%2C+b%3Ef%3E0%2C+t%3E0+for+M
-    # if beta <= initial_g:
-        # return 1
-    # else:
-        # return (np.log(np.exp(theta/2)) + np.log(beta + initial_g*(np.exp(theta/2) - 1)) - np.log((beta-initial_g)*np.exp(theta/2)+initial_g))/theta
-# def compute_initial_m_from_alpha(alpha, theta, initial_g):
-    # # wolfram|alpha (I used this query to solve for the initial value of M
-    # # https://www.wolframalpha.com/input/?i=solve+1%2F%281%2Bexp%28-t*%28M-0.5%29%29%29+%3D+%28c-a%29%28exp%28t%2F2%29-exp%28-t%2F2%29%29%2F%5B%281-a%29%281%2Bexp%28t%2F2%29%29%281%2Bexp%28-t%2F2%29%29%5D+%2B+1%2F%281%2Bexp%28t%2F2%29
-    # if alpha >= initial_g:
-        # return 0
-    # else:
-        # a = alpha
-        # c = initial_g
-        # e = np.exp(theta)
-        # f = np.exp(theta/2)
-        # g = np.exp(3*theta/2)
-        # t = theta
-        # return np.log((a**2*e+a*c*f-2*a*c*e-a*c*g-a*f+a*g-c**2*(f-g)+c*(2*e+f-g)-e) / (a**2-2*a*c-(c**2-2*c+1)*e+c**2)) / t
-
 def plot_prob_affirm_vs_position_with_initial_g(alphas, theta=2.0, r=0.035, beta=1.0, agent_count=400, num_reps=5000, initial_g=0.5, save_file=None):
-    def compute_initial_m_from_alpha(alpha, theta, initial_g):
-        # wolfram|alpha (I used this query to solve for the initial value of M
-        # https://www.wolframalpha.com/input/?i=solve+1%2F%281%2Bexp%28-t*%28M-0.5%29%29%29+%3D+%28c-a%29%28exp%28t%2F2%29-exp%28-t%2F2%29%29%2F%5B%281-a%29%281%2Bexp%28t%2F2%29%29%281%2Bexp%28-t%2F2%29%29%5D+%2B+1%2F%281%2Bexp%28t%2F2%29
+    """Produces a plot of the probability of a witness affirming, with
+    the initial probability fixed to the value in `initial_g`.
+    """
+    def compute_initial_w_from_alpha(alpha, theta, initial_g):
+        """Computes the W_1 value such that the first witness has a given
+        probability of affirming.
+        """
         if alpha >= initial_g:
             return 0.0
         elif initial_g >= 1.0:
             return 1.0
         else:
+            # Find the value using binary search
+            # (this is fast enough and the closed form is nasty)
             upper_bound = 1.0
             lower_bound = 0.0
             while upper_bound - lower_bound > 1e-11:
@@ -150,11 +153,10 @@ def plot_prob_affirm_vs_position_with_initial_g(alphas, theta=2.0, r=0.035, beta
                 else:
                     return mid
             ans = (upper_bound + lower_bound)/2
-            # print(f'The value of m for alpha={alpha}, theta={theta}, and an initial g of {initial_g} is {ans}, which results in an initial g of {g_external_pressure(ans, theta, alpha, 1.0)}.')
             return ans
     sims = process_executor.map(
         compute_counts_for_args,
-        [(theta, r, alpha, beta, agent_count, num_reps, compute_initial_m_from_alpha(alpha, theta, initial_g))
+        [(theta, r, alpha, beta, agent_count, num_reps, compute_initial_w_from_alpha(alpha, theta, initial_g))
          for alpha in alphas
         ]
     )
@@ -207,39 +209,19 @@ def plot_affirm_rate_each_trial(alpha=0.0, beta=1.0, theta=10.0, r=0.035, agent_
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
-def plot_expected_overall_and_individuals(alpha=0.0, beta=1.0, theta=10.0, r=0.035, agent_count=200, num_reps=250, initial_w=0.5, save_file=None, lower_bias=1, upper_bias=1):
-    def g(w):
-        f = lambda theta, m: 1. / (1 + np.exp(theta * (m-0.5)))
-        plain_g = (f(theta, w) - f(theta, 0))/(f(theta, 1) - f(theta, 0))
-        return alpha + plain_g*(beta-alpha)
-    sims = many_simulate_complex_get_ws(theta, r, alpha, beta, agent_count, num_reps, initial_w)
-    xs = np.arange(0, agent_count+1, 1)
-    from random import random
-    counted_runs = []
-    for sim in sims:
-        if sim[-1] <= 0.5:
-            if random() < lower_bias:
-                counted_runs.append(g(sim))
-            else:
-                continue
-        else:
-            if random() < upper_bias:
-                counted_runs.append(g(sim))
-            else:
-                continue
-        plt.plot(xs, sim, color='#324dbe', marker='', linewidth=0.1)
-    average = np.array([sum(run[i] for run in counted_runs)/len(counted_runs) for i in range(len(sims[0]))])
-    plt.plot(xs, average, color='k', marker='')
-    plt.ylabel('$W_i$')
-    plt.xlabel('Witness number')
-    if save_file is None: plt.show()
-    else: plt.savefig(save_file, **savefig_args)
-    plt.clf()
-
 def prob_from_args(args):
+    """Helper function to appease ProcessPoolExecutor's inability to
+    send lambdas.
+    """
     return prob_last_n_unanimous_closed_form(*args)
 def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None):
+    """Plots the posterior over the given lambda and p_h values (with
+    lambda on the x-axis).
+    """
     def phle_from_probs(prob, error, ph):
+        """Given the probability of a consensus, the error of that
+        number, and the prior, compute the posterior and its error.
+        """
         peh = pt*ph
         pelnh = prob
         pelnh_d = error
@@ -258,13 +240,15 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
     plt.xlabel('$\\lambda$')
     plt.ylabel('$P(H|E)$')
     plt.xlim(0, 1)
-    # plt.ylim(0, 1)
     plt.legend()
     if save_file is None: plt.show()
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
 def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None):
+    """Plots the probability of an affirming consensus forming over the
+    given lambda and p_h values.
+    """
     probs, error_bars = map(np.array, zip(*process_executor.map(prob_from_args, [
         (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
         for l in lambdas
@@ -281,8 +265,14 @@ def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, nu
     plt.clf()
 
 def prob_near_unanimous_from_args(args):
+    """Helper function to appease ProcessPoolExecutor's inability to
+    send lambdas.
+    """
     return prob_last_n_near_unanimous_with_fanout(*args)
 def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=9, tail_fanout=100):
+    """Plots the probability of an affirming near-consensus forming over
+    the given lambda and p_h values.
+    """
     probs, error_bars = map(np.array, zip(*process_executor.map(prob_near_unanimous_from_args, [
         (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps // tail_fanout, tail_fanout, frac_required, min_successful_reps)
         for l in lambdas
@@ -299,8 +289,14 @@ def plot_prob_of_near_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_coun
     plt.clf()
 
 def prob_near_unanimous_bidirectional_from_args(args):
+    """Helper function to appease ProcessPoolExecutor's inability to
+    send lambdas.
+    """
     return prob_last_n_near_unanimous_with_fanout_bidirectional(*args)
 def plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(lambdas, pfs, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16, tail_fanout=10):
+    """Plots the probability of anear-consensus forming, with lambda on
+    the x-axis, for the given values of lambda and p_f
+    """
     if plot_log:
         fig, ax = plt.subplots()
         ax.set_yscale("log")
@@ -319,6 +315,9 @@ def plot_prob_of_near_bidirectional_consensus_xaxis_lambdas(lambdas, pfs, N, the
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 def plot_prob_of_near_bidirectional_consensus_xaxis_pfs(lambdas, pfs, N, theta, r, agent_count, num_reps, frac_required, initial=0.5, plot_log=True, save_file=None, min_successful_reps=16, tail_fanout=10):
+    """Plots the probability of anear-consensus forming, with p_f on the
+    x-axis, for the given values of lambda and p_f
+    """
     if plot_log:
         fig, ax = plt.subplots()
         ax.set_yscale("log")
@@ -338,6 +337,13 @@ def plot_prob_of_near_bidirectional_consensus_xaxis_pfs(lambdas, pfs, N, theta, 
     plt.clf()
 
 def setup_plot_style():
+    """Setup matplotlib to make plots in the style we want for our
+    paper.
+
+    The colors have been chosen to be visually distinct. We also
+    include markers on each line to differentiate them for people
+    who are colorblind or who are using a greyscale printout.
+    """
     plt.style.use('ggplot')
     from cycler import cycler
     # Setup colors
@@ -348,6 +354,10 @@ def setup_plot_style():
     plt.rc('axes', prop_cycle=style_cycler)
 
 class AllContainer:
+    """Overrides contains so it contains all items.
+
+    Used to run all parts of the code if no sections are specified.
+    """
     def __contains__(self, item): return True
 
 def main(sections=AllContainer()):
@@ -383,7 +393,6 @@ def main(sections=AllContainer()):
         # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 40), [.5, 1e-3, 1e-5, 1e-7, 1e-8, 1e-9], 0.25, 0.5, 13, 10.0, 0.035, 1600, 100000, save_file='../plots/sod-h-given-e-small-pf.pdf')
         plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 8000, plot_log=True, save_file='../plots/sod-pconsensus-log.pdf')
         # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=False, save_file='../plots/sod-pconsensus-linear.pdf')
-        return
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 50), 0.9, 120, 10.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')

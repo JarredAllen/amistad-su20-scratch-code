@@ -18,6 +18,14 @@ pthread_mutex_t rand_lock = PTHREAD_MUTEX_INITIALIZER;
 // reject
 //
 // It relies on rand(), so it might not work as well on other platforms.
+// The man page for rand(3) on the computer we ran it on says:
+//
+// > on older rand() implementations, and on current implementations on
+// > different systems, the lower-order bits are much less random than
+// > the higher-order bits.
+//
+// This has no bearing on our execution of the code, but it may skew
+// your results if you try to reproduce our results.
 char get_agent_choice(double m, double theta) {
     int rng;
     pthread_mutex_lock(&rand_lock);
@@ -26,7 +34,11 @@ char get_agent_choice(double m, double theta) {
     return ((double)rng) / RAND_MAX < g(m, theta);
 }
 
-// Runs the basic simulation and stores its result in the array passed to result
+// Runs the basic simulation and stores its result in the array passed
+// to result
+//
+// result needs to already have enough space allocated, and it will
+// contain a 1 at an index if that witness affirmed, and a 0 otherwise.
 void sim_basic(char* result, double theta, int agent_count, int initial_yes, int initial_total) {
     int i,
         num_yes = initial_yes,
@@ -49,6 +61,16 @@ double g_complex(double m, double theta, double alpha, double beta) {
 }
 // Returns 1 if the agent chooses to affirm, 0 if the agent chooses to
 // reject. This function also includes alpha and beta
+//
+// It relies on rand(), so it might not work as well on other platforms.
+// The man page for rand(3) on the computer we ran it on says:
+//
+// > on older rand() implementations, and on current implementations on
+// > different systems, the lower-order bits are much less random than
+// > the higher-order bits.
+//
+// This has no bearing on our execution of the code, but it may skew
+// your results if you try to reproduce our results.
 char get_agent_choice_complex(double m, double theta, double alpha, double beta) {
     int rng;
     pthread_mutex_lock(&rand_lock);
@@ -57,6 +79,8 @@ char get_agent_choice_complex(double m, double theta, double alpha, double beta)
     return ((double)rng) / RAND_MAX < g_complex(m, theta, alpha, beta);
 }
 
+// Runs the external pressure simulation, outputting responses the same
+// way as `sim_basic`
 void sim_complex(char* result, double theta, double alpha, double beta, double r, int agent_count, double initial_m) {
     int i;
     char response;
@@ -68,6 +92,8 @@ void sim_complex(char* result, double theta, double alpha, double beta, double r
     }
 }
 
+// Runs the complex simulation, and outputs the values of W_i observed
+// by each witness into `result`.
 void sim_complex_get_ws(double* result, double theta, double alpha, double beta, double r, int agent_count, double initial_w) {
     int i;
     char response;
@@ -80,6 +106,7 @@ void sim_complex_get_ws(double* result, double theta, double alpha, double beta,
     result[agent_count] = w;
 }
 
+// Runs the complex simulation and returns the final value of W_i
 double sim_complex_get_w(double theta, double alpha, double beta, double r, int agent_count, double initial_w) {
     int i;
     char response;
@@ -91,6 +118,8 @@ double sim_complex_get_w(double theta, double alpha, double beta, double r, int 
     return w;
 }
 
+// Returns 1 if the last `tail_count` witnesses unanimously affirm,
+// after running a "warm-up" simulation with agent_count witnesses.
 char last_n_unanimous(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count) {
     double m = intial_m;
     int i;
@@ -109,6 +138,9 @@ char last_n_unanimous(double theta, double r, double alpha, double beta, int age
     return 1;
 }
 
+// Returns the probability of the last n witnesses unanimously
+// affirming, by running `last_n_unanimous` for `num_reps` iterations
+// and counting the number of successful runs.
 double prob_last_n_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps) {
     int i;
     int successes = 0;
@@ -122,6 +154,8 @@ double prob_last_n_unanimous(double theta, double r, double alpha, double beta, 
     return ans;
 }
 
+// The same as `prob_last_n_unanimous`, but each "warm-up" run gets
+// associated with many different tails, which get averaged together
 void prob_last_n_unanimous_with_fanout(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout, int min_successful_reps, double* prob_out, double* err_out) {
     int i, j;
     int successes = 0;
@@ -149,6 +183,9 @@ void prob_last_n_unanimous_with_fanout(double theta, double r, double alpha, dou
     *err_out = sqrt(ans*(1-ans) / (num_full_reps * tail_fanout));
 }
 
+// Returns 1 if the last `tail_count` witnesses nearly unanimously
+// affirm (allowing up to `reject_allowance` witnesses to disagree),
+// after running a "warm-up" simulation with agent_count witnesses.
 char last_n_near_unanimous(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count, int reject_allowance) {
     double m = intial_m;
     int i;
@@ -170,6 +207,9 @@ char last_n_near_unanimous(double theta, double r, double alpha, double beta, in
     return 1;
 }
 
+// Returns the probability of the last n witnesses nearly unanimously
+// affirming, by running `last_n_near_unanimous` for `num_reps`
+// iterations and counting the number of successful runs.
 void prob_last_n_near_unanimous(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
     int i;
     int successes = 0;
@@ -189,6 +229,8 @@ void prob_last_n_near_unanimous(double theta, double r, double alpha, double bet
     *err_out = sqrt(*prob_out*(1.0 - *prob_out) / num_reps);
 }
 
+// The same as `prob_last_n_near_unanimous`, but each "warm-up" run gets
+// associated with many different tails, which get averaged together
 void prob_last_n_near_unanimous_with_fanout(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
     int i, j;
     int successes = 0;
@@ -215,6 +257,8 @@ void prob_last_n_near_unanimous_with_fanout(double theta, double r, double alpha
     *err_out = sqrt(*prob_out*(1.0 - *prob_out) / (num_full_reps * tail_fanout));
 }
 
+// The same as `prob_last_n_near_unanimous`, but a consensus affirming
+// or rejecting is counted as a consensus.
 char last_n_near_unanimous_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double intial_m, int tail_count, int reject_allowance) {
     double m = intial_m;
     int i;
@@ -239,6 +283,9 @@ char last_n_near_unanimous_bidirectional(double theta, double r, double alpha, d
     return 1;
 }
 
+// Returns the probability of the last n witnesses having a near
+// consensus, by running `last_n_near_unanimous_bidirectional` for
+// `num_reps` iterations and counting the number of successful runs.
 void prob_last_n_near_unanimous_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_reps, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
     int i;
     int successes = 0;
@@ -258,6 +305,9 @@ void prob_last_n_near_unanimous_bidirectional(double theta, double r, double alp
     *err_out = sqrt(*prob_out*(1.0 - *prob_out) / num_reps);
 }
 
+// The same as `prob_last_n_near_unanimous_bidirectional`, but each
+// "warm-up" run gets associated with many different tails, which get
+// averaged together
 void prob_last_n_near_unanimous_with_fanout_bidirectional(double theta, double r, double alpha, double beta, int agent_count, double initial_m, int tail_count, int num_full_reps, int tail_fanout, int reject_allowance, int min_successful_reps, double* prob_out, double* err_out) {
     int i, j;
     int successes = 0;
@@ -284,6 +334,9 @@ void prob_last_n_near_unanimous_with_fanout_bidirectional(double theta, double r
     *err_out = sqrt(*prob_out*(1.0 - *prob_out) / (num_full_reps * tail_fanout));
 }
 
+// Given an array of values, and the number of trials those values were
+// computed for, compute the standard error for each trial and put it
+// into result.
 void compute_error_estimates(double* result, double* values, int num_values, int num_trials) {
     int i;
     for (i=0; i < num_values; i++) {

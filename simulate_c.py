@@ -17,16 +17,21 @@ get_agent_choice = clib.get_agent_choice
 get_agent_choice.restype = ctypes.c_char
 
 def sim_basic(theta, agent_count, initial_yes=1, initial_total=2):
+    """Run one iteration of the basic simulation (see the sim_basic
+    function in simulate.c for documentation).
+    """
     buf = np.array([0]*agent_count, dtype=np.byte)
     clib.sim_basic(ctypes.c_char_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_int(agent_count), ctypes.c_int(initial_yes), ctypes.c_int(initial_total))
     return buf
 
 def many_simulate_basic(theta, agent_count, num_sims, initial_yes=1, initial_total=2):
-    """Run many iterations of the complex simulation (including Recent
-    Majority Vote and External Pressure) and return them as a list.
+    """Run many iterations of the basic simulation and return them as a
+    list.
 
-    `num_sims` is the number of times to run it. See the documentation
-    of `sim_complex` for the other arguments.
+    `theta` is the parameter in the paper, `agent_count` is the number
+    of witnesses to simulate for, `num_sims` is the number of times to
+    run the simulation, and `initial_yes` and `initial_total` handle
+    the pseudocounts defined in the paper.
     """
     return [sim_basic(theta, agent_count, initial_yes, initial_total) for _ in range(num_sims)]
 
@@ -36,14 +41,20 @@ g_complex.restype = ctypes.c_double
 get_agent_choice_complex = clib.get_agent_choice_complex
 get_agent_choice_complex.restype = ctypes.c_char
 
-def sim_complex(theta, r, alpha, beta, agent_count, initial_m=0.5):
+def sim_complex(theta, r, alpha, beta, agent_count, initial_w=0.5):
+    """Run one iteration of the external pressure model simulation.
+
+    `theta`, `r`, `alpha`, and `beta` are the model parameters.
+    `agent_count` is the number of witnesses to simulate for.
+    `initial_w` is the value of W_1 to use.
+    """
     buf = np.zeros(agent_count, dtype=np.byte)
-    clib.sim_complex(ctypes.c_char_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_double(r), ctypes.c_int(agent_count), ctypes.c_double(initial_m))
+    clib.sim_complex(ctypes.c_char_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_double(r), ctypes.c_int(agent_count), ctypes.c_double(initial_w))
     return buf
 
 def many_simulate_complex(theta, r, alpha, beta, agent_count, num_sims, initial_m=0.5):
-    """Run many iterations of the complex simulation (including Recent
-    Majority Vote and External Pressure) and return them as a list.
+    """Run many iterations of the external pressure model simulation and
+    return them as a list.
 
     `num_sims` is the number of times to run it. See the documentation
     of `sim_complex` for the other arguments.
@@ -53,14 +64,16 @@ def many_simulate_complex(theta, r, alpha, beta, agent_count, num_sims, initial_
 def sim_complex_get_ws(theta, r, alpha, beta, agent_count, initial_w=0.5):
     """Like `sim_complex`, but returns the value of w at each witness
     instead of their vote.
+
+    See `sim_complex` for the parameter meanings.
     """
     buf = np.empty(agent_count+1, dtype=np.float64)
     clib.sim_complex_get_ws(ctypes.c_void_p(buf.ctypes.data), ctypes.c_double(theta), ctypes.c_double(alpha), ctypes.c_double(beta), ctypes.c_double(r), ctypes.c_int(agent_count), ctypes.c_double(initial_w))
     return buf
 
 def many_simulate_complex_get_ws(theta, r, alpha, beta, agent_count, num_sims, initial_w=0.5):
-    """Run many iterations of the complex simulation (including Recent
-    Majority Vote and External Pressure) and return them as a list.
+    """Run many iterations of the external pressure model simulation and
+    return them as a 2D numpy array.
 
     `num_sims` is the number of times to run it. See the documentation
     of `sim_complex` for the other arguments.
@@ -268,8 +281,14 @@ def prob_last_n_unanimous_closed_form(theta, r, alpha, beta, agent_count, initia
     For the other parameters, see the documentation on `sim_complex`.
     """
     def get_local_consensus_probability(theta, r, alpha, beta, tail_count, w1):
+        """Returns the probability that the first `tail_count` witnesses
+        will affirm, for the given parameters of the simulation.
+        """
         return reduce(lambda x,y: x*y, [g_external_pressure(1+(w1-1)*(1-r)**i, theta, alpha, beta) for i in range(tail_count)], 1.0)
     def get_final_w_i_value(theta, r, alpha, beta, agent_count, initial_w):
+        """Runs the external pressure model simulation and returns the
+        last value of W_i after running for `agent_count` witnesses.
+        """
         return clib.sim_complex_get_w(
                 ctypes.c_double(theta),
                 ctypes.c_double(alpha),
