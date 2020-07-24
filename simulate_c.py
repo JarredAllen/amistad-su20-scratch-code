@@ -1,6 +1,9 @@
 import ctypes
+from functools import reduce
 import math
 import numpy as np
+
+from basic_sim import g_external_pressure
 
 clib = ctypes.cdll.LoadLibrary('./simulate.so')
 
@@ -250,3 +253,33 @@ def prob_last_n_near_unanimous_with_fanout_bidirectional(theta, r, alpha, beta, 
         ctypes.byref(err),
     )
     return prob.value, err.value
+
+clib.sim_complex_get_w.res_type = ctypes.c_double
+
+def prob_last_n_unanimous_closed_form(theta, r, alpha, beta, agent_count, initial_w, tail_count, num_reps):
+    """Runs the simulation for `num_reps` warm-up periods, going through
+    agent_count iterations. For each iteration, it observes the final
+    value of W_i, and computes the probability that the next
+    `tail_count` witnesses will all affirm the hypothesis.
+
+    It returns a tuple containing the estimated probability and the (1
+    sigma) error on that estimate.
+
+    For the other parameters, see the documentation on `sim_complex`.
+    """
+    def get_local_consensus_probability(theta, r, alpha, beta, tail_count, w1):
+        return reduce(lambda x,y: x*y, [g_external_pressure(1+(w1-1)*(1-r)**i, theta, alpha, beta) for i in range(tail_count)], 1.0)
+    def get_final_w_i_value(theta, r, alpha, beta, agent_count, initial_w):
+        return clib.sim_complex_get_w(
+                ctypes.c_double(theta),
+                ctypes.c_double(alpha),
+                ctypes.c_double(beta),
+                ctypes.c_double(r),
+                ctypes.c_int(agent_count),
+                ctypes.c_double(initial_w),
+            )
+    probs = np.array([
+        get_local_consensus_probability(theta, r, alpha, beta, tail_count, get_final_w_i_value(theta, r, alpha, beta, agent_count, initial_w))
+        for _ in range(num_reps)
+    ])
+    return np.average(probs), np.std(probs) / np.sqrt(num_reps)

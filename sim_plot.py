@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from basic_sim import g, g_external_pressure
 from simulate_c import many_simulate_complex, many_simulate_basic, compute_error_estimates, \
         prob_last_n_unanimous_with_fanout, prob_last_n_unanimous, prob_last_n_near_unanimous, prob_last_n_near_unanimous_with_fanout, \
-        prob_last_n_near_unanimous_with_fanout_bidirectional, many_simulate_complex_get_ws
+        prob_last_n_near_unanimous_with_fanout_bidirectional, many_simulate_complex_get_ws, prob_last_n_unanimous_closed_form
 
 process_executor = futures.ProcessPoolExecutor(max_workers=20)
 
@@ -237,8 +237,8 @@ def plot_expected_overall_and_individuals(alpha=0.0, beta=1.0, theta=10.0, r=0.0
     plt.clf()
 
 def prob_from_args(args):
-    return prob_last_n_unanimous_with_fanout(*args)
-def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None, tail_fanout=100):
+    return prob_last_n_unanimous_closed_form(*args)
+def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_count, num_reps, initial=0.5, save_file=None):
     def phle_from_probs(prob, error, ph):
         peh = pt*ph
         pelnh = prob
@@ -248,7 +248,7 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
         phle_d = phle * pelnh_d*(1-ph) / (peh + pelnh*(1-ph))
         return phle, phle_d
     sim_data = list(process_executor.map(prob_from_args, [
-        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps // tail_fanout, tail_fanout)
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
         for l in lambdas
     ]))
     for ph in phs:
@@ -264,9 +264,9 @@ def plot_prob_h_given_e_for_lambdas(lambdas, phs, pf, pt, N, theta, r, agent_cou
     else: plt.savefig(save_file, **savefig_args)
     plt.clf()
 
-def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None, tail_fanout=100):
+def plot_prob_of_consensus_for_lambdas(lambdas, pf, N, theta, r, agent_count, num_reps, initial=0.5, plot_log=True, save_file=None):
     probs, error_bars = map(np.array, zip(*process_executor.map(prob_from_args, [
-        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps // tail_fanout, tail_fanout)
+        (theta, r, (1-l)*pf, pf + (1-pf)*l, agent_count, initial, N, num_reps)
         for l in lambdas
     ])))
     fig, ax = plt.subplots()
@@ -379,10 +379,11 @@ def main(sections=AllContainer()):
         print('External Pressure with betas not implemented yet')
 
     if 'spectrum' in sections:
-        plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 10.0, 0.035, 1600, 80000, tail_fanout=20, save_file='../plots/sod-h-given-e.pdf')
-        # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 40), [.5, 1e-3, 1e-5, 1e-7, 1e-8, 1e-9], 0.25, 0.5, 13, 10.0, 0.035, 1600, 100000, tail_fanout=250, save_file='../plots/sod-h-given-e-small-pf.pdf')
-        plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=True, tail_fanout=20, save_file='../plots/sod-pconsensus-log.pdf')
-        plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=False, tail_fanout=20, save_file='../plots/sod-pconsensus-linear.pdf')
+        plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 100), [.5, .1, 1e-2, 1e-3, 1e-4], 0.95, 0.5, 150, 10.0, 0.035, 1600, 8000, save_file='../plots/sod-h-given-e.pdf')
+        # plot_prob_h_given_e_for_lambdas(np.linspace(0, 1, 40), [.5, 1e-3, 1e-5, 1e-7, 1e-8, 1e-9], 0.25, 0.5, 13, 10.0, 0.035, 1600, 100000, save_file='../plots/sod-h-given-e-small-pf.pdf')
+        plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 8000, plot_log=True, save_file='../plots/sod-pconsensus-log.pdf')
+        # plot_prob_of_consensus_for_lambdas(np.linspace(0, 1, 50), 0.5, 13, 10.0, 0.035, 1600, 150000, plot_log=False, save_file='../plots/sod-pconsensus-linear.pdf')
+        return
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.35, 20, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-4-log.pdf')
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 40), 0.5, 30, 10.0, 0.035, 1600, 80000, .9, save_file='../plots/sod-near-consensus-2-log.pdf')
         plot_prob_of_near_consensus_for_lambdas(np.linspace(0, 1, 50), 0.9, 120, 10.0, 0.035, 1600, 80000, .99, save_file='../plots/sod-near-consensus-1-log.pdf')
